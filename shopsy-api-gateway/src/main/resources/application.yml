@@ -1,0 +1,62 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: shopsy-api-gateway
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+      routes:
+        - id: user-service
+          uri: lb://shopsy-user-service
+          predicates:
+            - Path=/api/users/**
+        - id: product-service
+          uri: lb://shopsy-product-service
+          predicates:
+            - Path=/api/products/**, /api/categories/**
+        - id: order-service
+          uri: lb://shopsy-order-service
+          predicates:
+            - Path=/api/orders/**
+        - id: cart-service
+          uri: lb://shopsy-cart-service
+          predicates:
+            - Path=/api/cart/**
+        - id: payment-service
+          uri: lb://shopsy-payment-service
+          predicates:
+            - Path=/api/payments/**
+        - id: ai-service
+          uri: lb://shopsy-ai-service
+          predicates:
+            - Path=/api/chat/**
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    preferIpAddress: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always

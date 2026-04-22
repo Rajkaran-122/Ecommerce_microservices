@@ -1,0 +1,33 @@
+{
+  "name": "Shopsy E-Commerce Platform",
+  "image": "mcr.microsoft.com/devcontainers/java:17-bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "installMaven": "true",
+      "installGradle": "false"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "java.server.launchMode": "Standard"
+      },
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-maven",
+        "github.vscode-github-actions",
+        "github.vscode-pull-request-github",
+        "redhat.vscode-xml",
+        "vmware.vscode-boot-dev-pack",
+        "mhutchie.git-graph",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  },
+  "forwardPorts": [5173, 8080, 8888, 8761, 9090]
+}
