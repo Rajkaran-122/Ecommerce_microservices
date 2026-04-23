@@ -1,24 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Filter, Star, ChevronDown, SlidersHorizontal, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
-
-const MOCK_PRODUCTS = [
-  { id: 1, name: "Aura Noise-Canceling Headphones", price: 299.99, category: "Electronics", rating: 4.9, reviews: 124, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80" },
-  { id: 2, name: "Minimalist Chronograph Watch", price: 149.00, category: "Accessories", rating: 4.7, reviews: 89, image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80" },
-  { id: 3, name: "Smart Fitness Ring", price: 199.50, category: "Wearables", rating: 4.8, reviews: 210, image: "https://images.unsplash.com/photo-1572569438065-8092289E753d?w=800&q=80" },
-  { id: 4, name: "Ceramic Pour-Over Kettle", price: 85.00, category: "Home", rating: 4.6, reviews: 45, image: "https://images.unsplash.com/photo-1520006403909-838d6b92c22e?w=800&q=80" },
-  { id: 5, name: "Mechanical Keyboard Pro", price: 175.00, category: "Electronics", rating: 4.9, reviews: 320, image: "https://images.unsplash.com/photo-1595225476474-87563907a212?w=800&q=80" },
-  { id: 6, name: "Organic Cotton Backpack", price: 110.00, category: "Accessories", rating: 4.5, reviews: 67, image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&q=80" },
-];
+import { Link, useSearchParams } from 'react-router-dom';
+import { productApi, type Product } from '../lib/api';
 
 const CATEGORIES = ["All", "Electronics", "Accessories", "Wearables", "Home"];
 
 const Products: React.FC = () => {
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialCategory = searchParams.get('category') || "All";
+  const [activeCategory, setActiveCategory] = useState(initialCategory);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      try {
+        const response = await productApi.getAll();
+        setProducts(response.data);
+      } catch (error) {
+        console.error('Failed to fetch products:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  useEffect(() => {
+    const categoryFromUrl = searchParams.get('category');
+    if (categoryFromUrl && CATEGORIES.includes(categoryFromUrl)) {
+      setActiveCategory(categoryFromUrl);
+    } else if (!categoryFromUrl) {
+      setActiveCategory("All");
+    }
+  }, [searchParams]);
+
+  const handleCategoryChange = (category: string) => {
+    setActiveCategory(category);
+    if (category === "All") {
+      setSearchParams({});
+    } else {
+      setSearchParams({ category });
+    }
+  };
   
   const filteredProducts = activeCategory === "All" 
-    ? MOCK_PRODUCTS 
-    : MOCK_PRODUCTS.filter(p => p.category === activeCategory);
+    ? products 
+    : products.filter(p => p.category?.name === activeCategory);
+
+  const getFirstImage = (imageUrls: string) => {
+    if (!imageUrls) return "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80";
+    return imageUrls.split(',')[0];
+  };
 
   return (
     <div className="w-full pb-32 pt-40 overflow-hidden relative bg-background">
@@ -68,7 +103,7 @@ const Products: React.FC = () => {
                   {CATEGORIES.map(category => (
                     <li key={category}>
                       <button 
-                        onClick={() => setActiveCategory(category)}
+                        onClick={() => handleCategoryChange(category)}
                         className={`group flex items-center gap-3 w-full text-left transition-all duration-300 ${
                           activeCategory === category 
                             ? "text-foreground font-black translate-x-2" 
@@ -100,59 +135,73 @@ const Products: React.FC = () => {
 
           {/* Product Grid */}
           <div className="flex-1">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
-              {filteredProducts.map((product, index) => (
-                <div 
-                  key={product.id} 
-                  className="premium-card group bg-background animate-slide-up-fade"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <Link to={`/product/${product.id}`} className="block relative overflow-hidden h-[350px] bg-foreground/[0.03]">
-                    <img 
-                      src={product.image} 
-                      alt={product.name} 
-                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 filter contrast-110"
-                    />
-                    <div className="absolute top-6 left-6 px-4 py-1.5 glass-premium rounded-full text-[10px] font-black uppercase tracking-widest text-foreground shadow-xl">
-                      {product.category}
-                    </div>
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center backdrop-blur-[2px]">
-                      <span className="px-8 py-3 bg-white text-black font-black rounded-full scale-90 group-hover:scale-100 transition-transform duration-500">View Detail</span>
-                    </div>
-                  </Link>
-                  
-                  <div className="p-8 relative z-10">
-                    <div className="flex justify-between items-start mb-4 gap-4">
-                      <Link to={`/product/${product.id}`}>
-                        <h3 className="font-bold text-xl text-foreground hover:opacity-60 transition-all font-outfit leading-tight line-clamp-1 uppercase tracking-tight">{product.name}</h3>
-                      </Link>
-                    </div>
-                    
-                    <div className="flex items-center justify-between mb-8">
-                      <div className="flex items-center gap-1.5">
-                        <Star size={16} className="fill-foreground text-foreground" />
-                        <span className="text-foreground font-black text-sm">{product.rating}</span>
-                        <span className="text-foreground/30 text-xs font-bold uppercase tracking-tighter">({product.reviews} Verification)</span>
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-40 gap-8">
+                <div className="w-20 h-20 border-4 border-foreground/10 border-t-foreground rounded-full animate-spin" />
+                <p className="caps-micro !text-foreground animate-pulse">Scanning The Vault...</p>
+              </div>
+            ) : filteredProducts.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
+                {filteredProducts.map((product, index) => (
+                  <div 
+                    key={product.id} 
+                    className="premium-card group bg-background animate-slide-up-fade"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <Link to={`/product/${product.id}`} className="block relative overflow-hidden h-[350px] bg-foreground/[0.03]">
+                      <img 
+                        src={getFirstImage(product.imageUrls)} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 filter contrast-110"
+                      />
+                      <div className="absolute top-6 left-6 px-4 py-1.5 glass-premium rounded-full text-[10px] font-black uppercase tracking-widest text-foreground shadow-xl">
+                        {product.category?.name || "Uncategorized"}
                       </div>
-                      <span className="font-black text-2xl text-foreground tracking-tighter">${product.price.toFixed(0)}</span>
-                    </div>
+                      {/* Hover Overlay */}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center backdrop-blur-[2px]">
+                        <span className="px-8 py-3 bg-white text-black font-black rounded-full scale-90 group-hover:scale-100 transition-transform duration-500">View Detail</span>
+                      </div>
+                    </Link>
+                    
+                    <div className="p-8 relative z-10">
+                      <div className="flex justify-between items-start mb-4 gap-4">
+                        <Link to={`/product/${product.id}`}>
+                          <h3 className="font-bold text-xl text-foreground hover:opacity-60 transition-all font-outfit leading-tight line-clamp-1 uppercase tracking-tight">{product.name}</h3>
+                        </Link>
+                      </div>
+                      
+                      <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-1.5">
+                          <Star size={16} className="fill-foreground text-foreground" />
+                          <span className="text-foreground font-black text-sm">{product.rating?.toFixed(1)}</span>
+                          <span className="text-foreground/30 text-xs font-bold uppercase tracking-tighter">({product.reviewCount} Verification)</span>
+                        </div>
+                        <span className="font-black text-2xl text-foreground tracking-tighter">${product.price.toFixed(0)}</span>
+                      </div>
 
-                    <button className="w-full py-5 rounded-2xl bg-foreground text-background hover:bg-foreground/90 transition-all duration-500 font-black text-sm uppercase tracking-widest flex justify-center items-center gap-3 group/btn shadow-[0_10px_30px_rgba(var(--foreground),0.2)]">
-                      <span>Add to Vault</span> 
-                      <ArrowRight size={18} className="transition-transform duration-500 group-hover/btn:translate-x-2" />
-                    </button>
+                      <button className="w-full py-5 rounded-2xl bg-foreground text-background hover:bg-foreground/90 transition-all duration-500 font-black text-sm uppercase tracking-widest flex justify-center items-center gap-3 group/btn shadow-[0_10px_30px_rgba(var(--foreground),0.2)]">
+                        <span>Add to Vault</span> 
+                        <ArrowRight size={18} className="transition-transform duration-500 group-hover/btn:translate-x-2" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-40 gap-8">
+                <p className="body-pro text-center">No products found in this collection.</p>
+                <button onClick={() => handleCategoryChange("All")} className="caps-micro border-b-2 border-foreground pb-2">View All Curation</button>
+              </div>
+            )}
 
             {/* Pagination / Load More */}
-            <div className="mt-20 flex justify-center">
-              <button className="px-12 py-5 glass-premium rounded-full font-black text-sm uppercase tracking-widest hover:bg-foreground/5 transition-all">
-                Load More Curation
-              </button>
-            </div>
+            {!isLoading && filteredProducts.length > 0 && (
+              <div className="mt-20 flex justify-center">
+                <button className="px-12 py-5 glass-premium rounded-full font-black text-sm uppercase tracking-widest hover:bg-foreground/5 transition-all">
+                  Load More Curation
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

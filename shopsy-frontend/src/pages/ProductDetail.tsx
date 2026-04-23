@@ -1,23 +1,61 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { Star, Shield, Truck, RotateCcw, ShoppingBag, Heart, ArrowRight } from 'lucide-react';
+import { productApi, cartApi, type Product } from '../lib/api';
 
 const ProductDetail: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('details');
 
-  const product = {
-    name: "Aura Noise-Canceling Headphones",
-    price: 299.99,
-    description: "Experience pure audio bliss with our next-generation active noise cancellation. Crafted with premium materials for all-day comfort and featuring a 40-hour battery life. The Aura headphones seamlessly adapt to your environment with neural frequency detection.",
-    rating: 4.9,
-    reviews: 124,
-    images: [
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80",
-      "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=800&q=80",
-    ],
-    features: ["Adaptive Neural ANC", "40-hour Battery Reserve", "Spatial Audio Architecture", "Multipoint Quantum Bluetooth"],
+  const handleAddToCart = async () => {
+    if (!product) return;
+    try {
+      await cartApi.addItem('test-user', product.id, quantity);
+      alert(`${product.name} secured to your vault.`);
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+    }
   };
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!id) return;
+      setIsLoading(true);
+      try {
+        const response = await productApi.getById(id);
+        setProduct(response.data);
+      } catch (error) {
+        console.error('Failed to fetch product:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="w-full h-screen flex flex-col items-center justify-center gap-8 bg-background">
+        <div className="w-20 h-20 border-4 border-foreground/10 border-t-foreground rounded-full animate-spin" />
+        <p className="caps-micro !text-foreground animate-pulse">Decrypting Product Data...</p>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="w-full h-screen flex flex-col items-center justify-center gap-8 bg-background">
+        <h1 className="display-title !text-4xl uppercase">Product Not Found</h1>
+        <Link to="/products" className="caps-micro border-b-2 border-foreground pb-2">Return to Curation</Link>
+      </div>
+    );
+  }
+
+  const images = product.imageUrls ? product.imageUrls.split(',') : ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80"];
 
   return (
     <div className="w-full pb-32 pt-40 bg-background overflow-hidden relative">
@@ -31,9 +69,9 @@ const ProductDetail: React.FC = () => {
         <div className="flex items-center gap-3 mb-16 animate-fade-in">
           <Link to="/" className="caps-micro !text-foreground/40 hover:!text-foreground transition-all">Home</Link>
           <div className="w-1 h-1 rounded-full bg-foreground/20" />
-          <Link to="/products" className="caps-micro !text-foreground/40 hover:!text-foreground transition-all">Electronics</Link>
+          <Link to="/products" className="caps-micro !text-foreground/40 hover:!text-foreground transition-all">{product.category?.name || "Collection"}</Link>
           <div className="w-1 h-1 rounded-full bg-foreground/20" />
-          <span className="caps-micro !text-foreground">Aura ANC</span>
+          <span className="caps-micro !text-foreground uppercase tracking-widest">{product.name}</span>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-24">
@@ -42,19 +80,20 @@ const ProductDetail: React.FC = () => {
           <div className="lg:col-span-7 space-y-8 animate-slide-in-left">
             <div className="premium-card aspect-[4/5] md:aspect-square overflow-hidden group border-foreground/5 bg-foreground/[0.02]">
               <img 
-                src={product.images[0]} 
+                src={images[0]} 
                 alt={product.name} 
                 className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-105 filter contrast-110"
               />
             </div>
-            <div className="grid grid-cols-2 gap-8">
-              <div className="premium-card aspect-square overflow-hidden cursor-pointer group border-foreground/5 hover:border-foreground/40 transition-all">
-                <img src={product.images[0]} alt="Thumbnail 1" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+            {images.length > 1 && (
+              <div className="grid grid-cols-2 gap-8">
+                {images.map((img, i) => (
+                  <div key={i} className="premium-card aspect-square overflow-hidden cursor-pointer group border-foreground/5 hover:border-foreground/40 transition-all">
+                    <img src={img} alt={`Thumbnail ${i + 1}`} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                  </div>
+                ))}
               </div>
-              <div className="premium-card aspect-square overflow-hidden cursor-pointer group border-foreground/5 hover:border-foreground/40 transition-all bg-foreground/[0.03]">
-                <img src={product.images[1]} alt="Thumbnail 2" className="w-full h-full object-cover opacity-40 group-hover:opacity-100 transition-all duration-700 group-hover:scale-110" />
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Right: Product Info - Editorial Layout */}
@@ -62,10 +101,10 @@ const ProductDetail: React.FC = () => {
             <div className="mb-12">
               <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full glass-premium mb-8">
                 <span className="w-2 h-2 rounded-full bg-foreground animate-pulse" />
-                <span className="caps-micro">Neural Series</span>
+                <span className="caps-micro">{product.brand || "Digital Metro"} Curation</span>
               </div>
               
-              <h1 className="display-title !text-5xl md:!text-6xl mb-8 tracking-tight font-outfit uppercase">{product.name}</h1>
+              <h1 className="display-title !text-5xl md:!text-6xl mb-8 tracking-tight font-outfit uppercase leading-none">{product.name}</h1>
               
               <div className="flex items-center justify-between mb-10">
                 <span className="text-4xl font-black text-foreground tracking-tighter">
@@ -73,9 +112,9 @@ const ProductDetail: React.FC = () => {
                 </span>
                 <div className="flex items-center gap-3 glass-premium px-6 py-2 rounded-full">
                   <div className="flex text-foreground">
-                    {[1,2,3,4,5].map(i => <Star key={i} size={14} className="fill-current" />)}
+                    {[1,2,3,4,5].map(i => <Star key={i} size={14} className={i <= (product.rating || 0) ? "fill-current" : "opacity-20"} />)}
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-foreground/40">Verified</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-foreground/40">{product.reviewCount || 0} Verification</span>
                 </div>
               </div>
 
@@ -95,7 +134,10 @@ const ProductDetail: React.FC = () => {
                   <button onClick={() => setQuantity(quantity + 1)} className="w-12 h-12 flex items-center justify-center hover:bg-foreground hover:text-background rounded-xl transition-all font-black text-xl">+</button>
                 </div>
                 
-                <button className="group flex-1 bg-foreground text-background font-black text-lg uppercase tracking-widest py-6 rounded-2xl flex items-center justify-center gap-4 hover:bg-foreground/90 transition-all shadow-[0_20px_50px_rgba(var(--foreground),0.2)] active:scale-95">
+                <button 
+                  onClick={handleAddToCart}
+                  className="group flex-1 bg-foreground text-background font-black text-lg uppercase tracking-widest py-6 rounded-2xl flex items-center justify-center gap-4 hover:bg-foreground/90 transition-all shadow-[0_20px_50px_rgba(var(--foreground),0.2)] active:scale-95"
+                >
                   <ShoppingBag size={22} />
                   <span>Secure to Vault</span>
                   <ArrowRight size={22} className="transition-transform group-hover:translate-x-2" />
@@ -139,25 +181,24 @@ const ProductDetail: React.FC = () => {
               </div>
               <div className="animate-fade-in">
                 {activeTab === 'details' ? (
-                  <ul className="space-y-6">
-                    {product.features.map((feature, i) => (
-                      <li key={i} className="flex items-center gap-4">
-                        <div className="w-1.5 h-1.5 rounded-full bg-foreground" />
-                        <span className="body-pro !text-lg">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="space-y-6">
+                    <p className="body-pro !text-lg leading-relaxed">{product.description}</p>
+                    <div className="flex flex-wrap gap-4 mt-8">
+                       <span className="px-4 py-1 border border-foreground/10 rounded-full text-[10px] font-bold uppercase tracking-widest text-foreground/60">SKU: {product.sku}</span>
+                       <span className="px-4 py-1 border border-foreground/10 rounded-full text-[10px] font-bold uppercase tracking-widest text-foreground/60">Stock: {product.stockQuantity > 0 ? "Available" : "Sold Out"}</span>
+                    </div>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-6">
                     {[
-                      { label: "Architecture", value: "Neural Link 4.0" },
-                      { label: "Reserve", value: "40 Hours Active" },
-                      { label: "Interface", value: "Quantum Bluetooth" },
-                      { label: "Composition", value: "Aerospace Magnesium" }
+                      { label: "Identification", value: product.sku },
+                      { label: "Availability", value: `${product.stockQuantity} Units` },
+                      { label: "Brand", value: product.brand || "Shopsy Elite" },
+                      { label: "Composition", value: "Premium Grade" }
                     ].map((spec, i) => (
                       <div key={i} className="flex justify-between items-center py-4 border-b border-foreground/[0.03]">
                         <span className="caps-micro !text-foreground/40">{spec.label}</span>
-                        <span className="text-lg font-bold text-foreground">{spec.value}</span>
+                        <span className="text-lg font-bold text-foreground uppercase tracking-tight">{spec.value}</span>
                       </div>
                     ))}
                   </div>

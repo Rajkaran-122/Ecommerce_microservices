@@ -172,9 +172,9 @@ const Home: React.FC = () => {
                 <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/90 to-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </Link>
 
-              <button className="inline-flex items-center justify-center gap-4 px-12 py-6 glass-premium text-foreground font-semibold text-xl rounded-full hover:bg-foreground/10 transition-all duration-500">
+              <Link to="/products?category=Accessories" className="inline-flex items-center justify-center gap-4 px-12 py-6 glass-premium text-foreground font-semibold text-xl rounded-full hover:bg-foreground/10 transition-all duration-500">
                 View Lookbook
-              </button>
+              </Link>
             </motion.div>
           </div>
 
@@ -246,7 +246,7 @@ const Home: React.FC = () => {
                 <span className="px-4 py-1.5 bg-foreground/10 backdrop-blur-md rounded-full caps-micro mb-6 inline-block border border-foreground/20 !text-foreground">Featured</span>
                 <h3 className="text-4xl font-bold text-foreground mb-4 leading-tight">Minimalist Workspace Essentials</h3>
                 <p className="text-foreground/70 mb-8 text-lg">Upgrade your productivity with our latest curation of ultra-premium desktop accessories.</p>
-                <button className="px-8 py-3 bg-foreground text-background font-bold rounded-full hover:bg-zinc-200 transition-all duration-300">Shop Workspace</button>
+                <Link to="/products?category=Electronics" className="px-8 py-3 bg-foreground text-background font-bold rounded-full hover:bg-zinc-200 transition-all duration-300 inline-block">Shop Workspace</Link>
               </div>
             </div>
 
@@ -355,14 +355,14 @@ const Home: React.FC = () => {
         <div className="relative z-20 container mx-auto px-6 text-center">
           <motion.div 
             variants={revealVariants}
-            className="inline-block px-8 py-3 glass-premium rounded-full mb-12 backdrop-blur-md border-white/10"
+            className="inline-block px-8 py-3 glass-premium rounded-full mb-12 backdrop-blur-md border-foreground/10"
           >
-            <span className="caps-micro !text-white tracking-[0.5em]">Phase: Acceleration</span>
+            <span className="caps-micro text-foreground tracking-[0.5em]">Phase: Acceleration</span>
           </motion.div>
 
           <motion.h2 
             variants={revealVariants}
-            className="display-title text-white mb-12 drop-shadow-[0_0_30px_rgba(255,255,255,0.4)] animate-velocity bg-[linear-gradient(110deg,#fff,45%,#aaa,55%,#fff)] bg-[length:200%_100%] bg-clip-text text-transparent transition-all duration-1000 group-hover:scale-110 tracking-tight"
+            className="display-title text-foreground mb-12 drop-shadow-[0_0_30px_rgba(var(--foreground),0.2)] animate-velocity bg-[linear-gradient(110deg,hsl(var(--foreground)),45%,hsl(var(--foreground)/0.4),55%,hsl(var(--foreground)))] bg-[length:200%_100%] bg-clip-text text-transparent transition-all duration-1000 group-hover:scale-110 tracking-tight"
           >
             THE PURSUIT OF <br />
             <span className="italic font-light opacity-80 group-hover:opacity-100 transition-opacity">SPEED.</span>
@@ -370,23 +370,23 @@ const Home: React.FC = () => {
 
           <motion.p 
             variants={revealVariants}
-            className="body-pro !text-white/80 max-w-2xl mx-auto mb-16 text-xl leading-relaxed"
+            className="body-pro text-foreground/80 max-w-2xl mx-auto mb-16 text-xl leading-relaxed"
           >
             Hold anywhere to accelerate. Join the Shopsy Elite for early access to the Velocity Drop 01.
           </motion.p>
 
-          <motion.button 
-            variants={revealVariants}
-            className="group relative z-30 px-16 py-8 bg-white text-black font-black text-2xl rounded-full overflow-hidden hover:scale-[1.1] transition-all duration-500 shadow-[0_0_60px_rgba(255,255,255,0.4)] hover:shadow-[0_0_80px_rgba(255,255,255,0.6)]"
+          <Link 
+            to="/products"
+            className="group relative z-30 px-16 py-8 bg-foreground text-background font-black text-2xl rounded-full overflow-hidden hover:scale-[1.1] transition-all duration-500 shadow-[0_0_60px_rgba(var(--foreground),0.3)] hover:shadow-[0_0_80px_rgba(var(--foreground),0.5)] inline-block"
           >
-            <span className="relative z-10">ENTER THE DRIVE</span>
-            <div className="absolute inset-0 bg-zinc-200 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500" />
-          </motion.button>
+            <span className="relative z-10 uppercase tracking-widest">ENTER THE DRIVE</span>
+            <div className="absolute inset-0 bg-background/20 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500" />
+          </Link>
         </div>
 
         {/* Interaction Prompt */}
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 opacity-40 group-hover:opacity-100 transition-opacity">
-          <p className="caps-micro !text-white animate-pulse">Hold to Speed Up</p>
+          <p className="caps-micro text-foreground animate-pulse">Hold to Speed Up</p>
         </div>
       </motion.section>
 

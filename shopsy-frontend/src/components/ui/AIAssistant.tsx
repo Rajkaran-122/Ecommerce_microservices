@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Sparkles, Bot, User } from 'lucide-react';
+import { aiApi } from '../../lib/api';
 
 interface Message {
   id: string;
@@ -17,34 +18,46 @@ const AIAssistant: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
-    if (isOpen) {
-      scrollToBottom();
-    }
-  }, [messages, isOpen]);
+    scrollToBottom();
+  }, [messages, isTyping]);
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
 
-    const userMsg: Message = { id: Date.now().toString(), sender: 'user', text: inputValue };
-    setMessages(prev => [...prev, userMsg]);
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      sender: 'user',
+      text: inputValue
+    };
+
+    setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsTyping(true);
 
-    // Simulate AI response with refined language
-    setTimeout(() => {
-      const botMsg: Message = { 
-        id: (Date.now() + 1).toString(), 
-        sender: 'bot', 
-        text: 'Analyzing our velocity-grade inventory. For your aesthetic, I recommend the Monochrome Carbon series. It perfectly encapsulates our zero-compromise philosophy.' 
+    try {
+      const response = await aiApi.chat(inputValue);
+      const botMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'bot',
+        text: response.data.response || response.data.message || "I am currently processing your request with high priority."
       };
-      setMessages(prev => [...prev, botMsg]);
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('AI Service Error:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'bot',
+        text: "I am currently experiencing a neural link interruption. Please try again shortly."
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -126,7 +139,7 @@ const AIAssistant: React.FC = () => {
 
         {/* Input - Refined with HSL tokens */}
         <div className="p-8 bg-background/40 border-t border-foreground/5 backdrop-blur-2xl">
-          <form onSubmit={handleSend} className="flex gap-3 relative group">
+          <form onSubmit={handleSendMessage} className="flex gap-3 relative group">
             <input 
               type="text" 
               value={inputValue}

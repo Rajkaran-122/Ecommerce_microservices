@@ -55,7 +55,7 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
             Shop
             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-foreground transition-all duration-500 group-hover/link:w-full" />
           </Link>
-          <Link to="/categories" className="caps-micro !text-foreground hover:opacity-60 transition-all duration-300 relative group/link">
+          <Link to="/products?category=Electronics" className="caps-micro !text-foreground hover:opacity-60 transition-all duration-300 relative group/link">
             Categories
             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-foreground transition-all duration-500 group-hover/link:w-full" />
           </Link>
@@ -72,9 +72,9 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
           </button>
 
-          <button className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-foreground/10 text-foreground transition-all duration-500">
+          <Link to="/products" className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-foreground/10 text-foreground transition-all duration-500">
             <User size={20} />
-          </button>
+          </Link>
           
           <Link to="/cart" className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-foreground/10 text-foreground transition-all duration-500 group/cart">
             <ShoppingBag size={20} className="group-hover/cart:scale-110 transition-transform duration-500" />
@@ -98,8 +98,8 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
         <div className="flex flex-col px-8 py-8 gap-6">
           <Link to="/" className="text-2xl font-black text-foreground hover:pl-4 transition-all duration-500" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
           <Link to="/products" className="text-2xl font-black text-foreground hover:pl-4 transition-all duration-500" onClick={() => setIsMobileMenuOpen(false)}>Shop</Link>
-          <Link to="/categories" className="text-2xl font-black text-foreground hover:pl-4 transition-all duration-500" onClick={() => setIsMobileMenuOpen(false)}>Categories</Link>
-          <Link to="/deals" className="text-2xl font-black text-foreground opacity-40 hover:opacity-100 hover:pl-4 transition-all duration-500" onClick={() => setIsMobileMenuOpen(false)}>Deals</Link>
+          <Link to="/products?category=Electronics" className="text-2xl font-black text-foreground hover:pl-4 transition-all duration-500" onClick={() => setIsMobileMenuOpen(false)}>Categories</Link>
+          <Link to="/cart" className="text-2xl font-black text-foreground hover:pl-4 transition-all duration-500" onClick={() => setIsMobileMenuOpen(false)}>The Vault</Link>
         </div>
       </div>
     </nav>

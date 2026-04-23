@@ -38,14 +38,20 @@ const Footer: React.FC = () => {
           <div className="col-span-1 md:col-span-6 lg:col-span-3">
             <h3 className="caps-micro !text-foreground/40 mb-10">Navigation</h3>
             <ul className="flex flex-col gap-6">
-              {['Home', 'Products', 'Categories', 'The Vault'].map((item, i) => (
+              {[
+                { name: 'Home', path: '/' },
+                { name: 'All Products', path: '/products' },
+                { name: 'Electronics', path: '/products?category=Electronics' },
+                { name: 'Accessories', path: '/products?category=Accessories' },
+                { name: 'The Vault', path: '/cart' }
+              ].map((item, i) => (
                 <li key={i}>
                   <Link 
-                    to={item === 'The Vault' ? '/cart' : item === 'Home' ? '/' : `/${item.toLowerCase()}`} 
+                    to={item.path} 
                     className="group flex items-center gap-3 text-lg font-bold text-foreground/60 hover:text-foreground transition-all duration-300"
                   >
                     <span className="w-0 h-px bg-foreground group-hover:w-4 transition-all duration-500" />
-                    {item}
+                    {item.name}
                   </Link>
                 </li>
               ))}

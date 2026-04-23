@@ -1,32 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2, ArrowRight, Lock, CreditCard, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-const MOCK_CART = [
-  { id: 1, name: "Aura Noise-Canceling Headphones", price: 299.99, quantity: 1, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80", color: "Matte Black" },
-  { id: 4, name: "Ceramic Pour-Over Kettle", price: 85.00, quantity: 2, image: "https://images.unsplash.com/photo-1520006403909-838d6b92c22e?w=800&q=80", color: "Matte White" }
-];
+import { cartApi, type CartItem } from '../lib/api';
 
 const Cart: React.FC = () => {
-  const [cart, setCart] = useState(MOCK_CART);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const updateQuantity = (id: number, delta: number) => {
-    setCart(cart.map(item => {
-      if (item.id === id) {
-        return { ...item, quantity: Math.max(1, item.quantity + delta) };
-      }
-      return item;
-    }));
+  const fetchCart = async () => {
+    setIsLoading(true);
+    try {
+      const response = await cartApi.getCart('test-user');
+      setCart(response.data);
+    } catch (error) {
+      console.error('Failed to fetch cart:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const removeItem = (id: number) => {
-    setCart(cart.filter(item => item.id !== id));
+  useEffect(() => {
+    fetchCart();
+  }, []);
+
+  const updateQuantity = async (productId: number, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    try {
+      await cartApi.updateItem('test-user', productId, newQuantity);
+      fetchCart(); // Refresh cart data
+    } catch (error) {
+      console.error('Failed to update quantity:', error);
+    }
+  };
+
+  const removeItem = async (productId: number) => {
+    try {
+      await cartApi.removeItem('test-user', productId);
+      fetchCart(); // Refresh cart data
+    } catch (error) {
+      console.error('Failed to remove item:', error);
+    }
   };
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const tax = subtotal * 0.08;
-  const shipping = subtotal > 150 ? 0 : 15.00;
+  const shipping = subtotal > 150 || subtotal === 0 ? 0 : 15.00;
   const total = subtotal + tax + shipping;
+
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-[80vh] flex flex-col items-center justify-center pt-28 bg-background">
+        <div className="w-20 h-20 border-4 border-foreground/10 border-t-foreground rounded-full animate-spin mb-8" />
+        <p className="caps-micro !text-foreground animate-pulse">Accessing Your Secure Vault...</p>
+      </div>
+    );
+  }
 
   if (cart.length === 0) {
     return (
@@ -34,7 +62,7 @@ const Cart: React.FC = () => {
         <div className="w-32 h-32 bg-foreground/5 rounded-full flex items-center justify-center mb-10 animate-bounce-slow">
           <ShoppingBag size={48} className="text-foreground/20" />
         </div>
-        <h2 className="display-title !text-4xl mb-4">Your Vault is Empty</h2>
+        <h2 className="display-title !text-4xl mb-4 uppercase">Your Vault is Empty</h2>
         <p className="body-pro text-center max-w-sm mb-12">
           The pursuit of excellence begins with a single selection. Explore our latest curations.
         </p>
@@ -68,20 +96,20 @@ const Cart: React.FC = () => {
                 <div key={item.id} className="premium-card p-8 flex flex-col md:flex-row gap-8 items-center group animate-slide-up-fade" style={{ animationDelay: `${index * 0.1}s` }}>
                   {/* Product Image */}
                   <div className="w-full md:w-40 h-40 bg-foreground/[0.03] rounded-3xl overflow-hidden border border-foreground/5 flex-shrink-0">
-                    <img src={item.image} alt={item.name} className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110" />
+                    <img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110" />
                   </div>
                   
                   {/* Product Info */}
                   <div className="flex-1 text-center md:text-left">
                     <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-4">
                       <div>
-                        <Link to={`/product/${item.id}`}>
-                          <h3 className="font-bold text-2xl text-foreground hover:opacity-60 transition-all font-outfit uppercase tracking-tight line-clamp-1">{item.name}</h3>
+                        <Link to={`/product/${item.productId}`}>
+                          <h3 className="font-bold text-2xl text-foreground hover:opacity-60 transition-all font-outfit uppercase tracking-tight line-clamp-1">{item.productName}</h3>
                         </Link>
-                        <p className="caps-micro !text-foreground/40 mt-2">{item.color} // ID: {item.id}00X</p>
+                        <p className="caps-micro !text-foreground/40 mt-2">Verified Hardware // SKU: {item.productId}00X</p>
                       </div>
                       <button 
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => removeItem(item.productId)}
                         className="p-3 text-foreground/20 hover:text-red-500 hover:bg-red-500/5 rounded-full transition-all"
                         title="Remove from Vault"
                       >
@@ -91,9 +119,9 @@ const Cart: React.FC = () => {
 
                     <div className="flex flex-col md:flex-row justify-between items-center mt-auto pt-6 border-t border-foreground/5 gap-6">
                       <div className="flex items-center glass-premium rounded-2xl p-1.5 border-foreground/5">
-                        <button onClick={() => updateQuantity(item.id, -1)} className="w-10 h-10 flex items-center justify-center hover:bg-foreground hover:text-background rounded-xl transition-all font-bold text-lg">-</button>
+                        <button onClick={() => updateQuantity(item.productId, item.quantity - 1)} className="w-10 h-10 flex items-center justify-center hover:bg-foreground hover:text-background rounded-xl transition-all font-bold text-lg">-</button>
                         <span className="w-14 text-center font-black text-foreground text-lg">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, 1)} className="w-10 h-10 flex items-center justify-center hover:bg-foreground hover:text-background rounded-xl transition-all font-bold text-lg">+</button>
+                        <button onClick={() => updateQuantity(item.productId, item.quantity + 1)} className="w-10 h-10 flex items-center justify-center hover:bg-foreground hover:text-background rounded-xl transition-all font-bold text-lg">+</button>
                       </div>
                       
                       <div className="flex flex-col items-end">
