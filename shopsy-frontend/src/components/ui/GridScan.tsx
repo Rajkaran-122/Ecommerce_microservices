@@ -407,11 +407,11 @@ export const GridScan: React.FC<GridScanProps> = ({
       if (
         enableGyro &&
         typeof window !== 'undefined' &&
-        (window as any).DeviceOrientationEvent &&
-        (window as any).DeviceOrientationEvent.requestPermission
-      ) {
-        try {
-          await (window as any).DeviceOrientationEvent.requestPermission();
+      (window as Window & { DeviceOrientationEvent?: { requestPermission: () => Promise<string> } }).DeviceOrientationEvent &&
+      (window as Window & { DeviceOrientationEvent?: { requestPermission: () => Promise<string> } }).DeviceOrientationEvent!.requestPermission
+    ) {
+      try {
+        await (window as Window & { DeviceOrientationEvent?: { requestPermission: () => Promise<string> } }).DeviceOrientationEvent!.requestPermission();
         } catch {
           // noop
         }
@@ -597,7 +597,6 @@ export const GridScan: React.FC<GridScanProps> = ({
         composerRef.current = null;
       }
       renderer.dispose();
-      renderer.forceContextLoss();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
@@ -653,8 +652,8 @@ export const GridScan: React.FC<GridScanProps> = ({
     }
     if (bloomRef.current) {
       bloomRef.current.blendMode.opacity.value = Math.max(0, bloomIntensity);
-      (bloomRef.current as any).luminanceMaterial.threshold = bloomThreshold;
-      (bloomRef.current as any).luminanceMaterial.smoothing = bloomSmoothing;
+      (bloomRef.current as BloomEffect & { luminanceMaterial: { threshold: number; smoothing: number } }).luminanceMaterial.threshold = bloomThreshold;
+      (bloomRef.current as BloomEffect & { luminanceMaterial: { threshold: number; smoothing: number } }).luminanceMaterial.smoothing = bloomSmoothing;
     }
     if (chromaRef.current) {
       chromaRef.current.offset.set(chromaticAberration, chromaticAberration);
@@ -797,7 +796,7 @@ export const GridScan: React.FC<GridScanProps> = ({
         }
 
         if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
-          (video as any).requestVideoFrameCallback(() => detect(performance.now()));
+        (video as HTMLVideoElement & { requestVideoFrameCallback?: (cb: (ts: number) => void) => void }).requestVideoFrameCallback?.(() => detect(performance.now()));
         } else {
           requestAnimationFrame(detect);
         }
@@ -851,7 +850,7 @@ function smoothDampVec2(current: THREE.Vector2, target: THREE.Vector2, currentVe
   const x = omega * deltaTime;
   const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
 
-  let change = current.clone().sub(target);
+  const change = current.clone().sub(target);
   const originalTo = target.clone();
 
   const maxChange = maxSpeed * smoothTime;
@@ -879,7 +878,7 @@ function smoothDampFloat(current: number, target: number, velRef: { v: number },
   const x = omega * deltaTime;
   const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
 
-  let change = current - target;
+  const change = current - target;
   const originalTo = target;
 
   const maxChange = maxSpeed * smoothTime;
@@ -912,7 +911,7 @@ function median(buf: number[]) {
   return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) * 0.5;
 }
 
-function centroid(points: any[]) {
+function centroid(points: { x: number; y: number }[]) {
   let x = 0,
     y = 0;
   const n = points.length || 1;
@@ -923,7 +922,7 @@ function centroid(points: any[]) {
   return { x: x / n, y: y / n };
 }
 
-function dist2(a: any, b: any) {
+function dist2(a: { x: number; y: number }, b: { x: number; y: number }) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 export default GridScan;

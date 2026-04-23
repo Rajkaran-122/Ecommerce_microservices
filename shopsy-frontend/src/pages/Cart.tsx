@@ -20,7 +20,21 @@ const Cart: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchCart();
+    let isMounted = true;
+    const load = async () => {
+      try {
+        const response = await cartApi.getCart('test-user');
+        if (isMounted) setCart(response.data);
+      } catch (error) {
+        console.error('Failed to fetch cart:', error);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+    load();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const updateQuantity = async (productId: number, newQuantity: number) => {

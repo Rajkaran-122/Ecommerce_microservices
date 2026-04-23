@@ -36,12 +36,21 @@ export interface CartItem {
   imageUrl: string;
 }
 
+export interface ProductReview {
+  id: number;
+  userId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
 export const productApi = {
   getAll: () => api.get<Product[]>('/products'),
   getById: (id: string | number) => api.get<Product>(`/products/${id}`),
   getByCategory: (categoryId: number) => api.get<Product[]>(`/products/category/${categoryId}`),
   search: (query: string) => api.get<Product[]>(`/products/search?q=${query}`),
-  getReviews: (productId: number) => api.get<any[]>(`/products/${productId}/reviews`),
+  getReviews: (productId: number) => api.get<ProductReview[]>(`/products/${productId}/reviews`),
 };
 
 export const cartApi = {

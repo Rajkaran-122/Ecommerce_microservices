@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import './Hyperspeed.css';
 
 interface HyperspeedProps {
-  effectOptions?: any;
+  effectOptions?: Partial<typeof DEFAULT_EFFECT_OPTIONS>;
 }
 
 const DEFAULT_EFFECT_OPTIONS = {
@@ -47,7 +47,7 @@ const DEFAULT_EFFECT_OPTIONS = {
 
 const Hyperspeed: React.FC<HyperspeedProps> = ({ effectOptions = DEFAULT_EFFECT_OPTIONS }) => {
   const hyperspeed = useRef<HTMLDivElement>(null);
-  const appRef = useRef<any>(null);
+  const appRef = useRef<App | null>(null);
 
   useEffect(() => {
     if (appRef.current) {
@@ -83,16 +83,16 @@ const Hyperspeed: React.FC<HyperspeedProps> = ({ effectOptions = DEFAULT_EFFECT_
 // --- CLASSES MOVED OUTSIDE FOR CLARITY AND SCOPE FIX ---
 
 class App {
-  options: any;
+  options: typeof DEFAULT_EFFECT_OPTIONS;
   container: HTMLElement;
   hasValidSize: boolean;
   renderer: THREE.WebGLRenderer;
   composer: EffectComposer;
   camera: THREE.PerspectiveCamera;
   scene: THREE.Scene;
-  fogUniforms: any;
+  fogUniforms: Record<string, { value: THREE.Color | number }>;
   clock: THREE.Clock;
-  assets: any;
+  assets: Record<string, Record<string, HTMLImageElement>>;
   disposed: boolean;
   road: Road;
   leftCarLights: CarLights;
@@ -105,7 +105,7 @@ class App {
   renderPass: RenderPass | null = null;
   bloomPass: EffectPass | null = null;
 
-  constructor(container: HTMLElement, options: any = {}) {
+  constructor(container: HTMLElement, options: typeof DEFAULT_EFFECT_OPTIONS) {
     this.options = options;
     this.container = container;
     this.hasValidSize = false;
@@ -126,7 +126,7 @@ class App {
     this.scene = new THREE.Scene();
     this.scene.background = null;
 
-    let fog = new THREE.Fog(options.colors.background, options.length * 0.2, options.length * 500);
+    const fog = new THREE.Fog(options.colors.background, options.length * 0.2, options.length * 500);
     this.scene.fog = fog;
     this.fogUniforms = {
       fogColor: { value: fog.color },
@@ -196,9 +196,9 @@ class App {
 
     const smaaPass = new EffectPass(
       this.camera,
-      new (SMAAEffect as any)(
-        this.assets.smaa.search,
-        this.assets.smaa.area,
+      new (SMAAEffect as unknown as new (s: HTMLImageElement, a: HTMLImageElement, p: SMAAPreset) => SMAAEffect)(
+        this.assets.smaa.search as HTMLImageElement,
+        this.assets.smaa.area as HTMLImageElement,
         SMAAPreset.MEDIUM
       )
     );
@@ -253,40 +253,40 @@ class App {
     this.tick();
   }
 
-  onMouseDown(ev: any) {
+  onMouseDown(ev: MouseEvent) {
     if (this.options.onSpeedUp) this.options.onSpeedUp(ev);
     this.fovTarget = this.options.fovSpeedUp;
     this.speedUpTarget = this.options.speedUp;
   }
-  onMouseUp(ev: any) {
+  onMouseUp(ev: MouseEvent) {
     if (this.options.onSlowDown) this.options.onSlowDown(ev);
     this.fovTarget = this.options.fov;
     this.speedUpTarget = 0;
   }
-  onTouchStart(ev: any) {
+  onTouchStart(ev: TouchEvent) {
     if (this.options.onSpeedUp) this.options.onSpeedUp(ev);
     this.fovTarget = this.options.fovSpeedUp;
     this.speedUpTarget = this.options.speedUp;
   }
-  onTouchEnd(ev: any) {
+  onTouchEnd(ev: TouchEvent) {
     if (this.options.onSlowDown) this.options.onSlowDown(ev);
     this.fovTarget = this.options.fov;
     this.speedUpTarget = 0;
   }
-  onContextMenu(ev: any) { ev.preventDefault(); }
+  onContextMenu(ev: MouseEvent) { ev.preventDefault(); }
 
   update(delta: number) {
-    let lerpPercentage = Math.exp(-(-60 * Math.log2(1 - 0.1)) * delta);
+    const lerpPercentage = Math.exp(-(-60 * Math.log2(1 - 0.1)) * delta);
     this.speedUp += lerp(this.speedUp, this.speedUpTarget, lerpPercentage, 0.00001);
     this.timeOffset += this.speedUp * delta;
-    let time = this.clock.elapsedTime + this.timeOffset;
+    const time = this.clock.elapsedTime + this.timeOffset;
     this.rightCarLights.update(time);
     this.leftCarLights.update(time);
     this.leftSticks.update(time);
     this.road.update(time);
 
     let updateCamera = false;
-    let fovChange = lerp(this.camera.fov, this.fovTarget, lerpPercentage);
+    const fovChange = lerp(this.camera.fov, this.fovTarget, lerpPercentage);
     if (fovChange !== 0) {
       this.camera.fov += fovChange * delta * 6;
       updateCamera = true;
@@ -309,24 +309,26 @@ class App {
     this.disposed = true;
     if (this.scene) {
       this.scene.traverse(object => {
-        const obj = object as any;
+        const obj = object as THREE.Mesh;
         if (!obj.isMesh) return;
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
-          if (Array.isArray(obj.material)) obj.material.forEach((m: any) => m.dispose());
-          else obj.material.dispose();
+          if (Array.isArray(obj.material)) (obj.material as THREE.Material[]).forEach((m) => m.dispose());
+          else (obj.material as THREE.Material).dispose();
         }
       });
       this.scene.clear();
     }
+    if (this.composer) {
+      this.composer.dispose();
+      (this.composer as unknown) = null;
+    }
     if (this.renderer) {
       this.renderer.dispose();
-      this.renderer.forceContextLoss();
       if (this.renderer.domElement && this.renderer.domElement.parentNode) {
         this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
       }
     }
-    if (this.composer) this.composer.dispose();
     window.removeEventListener('resize', this.onWindowResize);
     if (this.container) {
       this.container.removeEventListener('mousedown', this.onMouseDown);
@@ -382,12 +384,12 @@ class App {
 
 class CarLights {
   webgl: App;
-  options: any;
-  colors: any;
-  speed: any;
+  options: typeof DEFAULT_EFFECT_OPTIONS;
+  colors: typeof DEFAULT_EFFECT_OPTIONS.colors;
+  speed: number[];
   fade: THREE.Vector2;
-  mesh: any;
-  constructor(webgl: App, options: any, colors: any, speed: any, fade: THREE.Vector2) {
+  mesh: THREE.Mesh | null = null;
+  constructor(webgl: App, options: typeof DEFAULT_EFFECT_OPTIONS, colors: number | number[], speed: number[], fade: THREE.Vector2) {
     this.webgl = webgl;
     this.options = options;
     this.colors = colors;
@@ -396,41 +398,41 @@ class CarLights {
   }
   init() {
     const options = this.options;
-    let curve = new THREE.LineCurve3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1));
-    let geometry = new THREE.TubeGeometry(curve, 40, 1, 8, false);
-    let instanced = new THREE.InstancedBufferGeometry().copy(geometry as any);
+    const curve = new THREE.LineCurve3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1));
+    const geometry = new THREE.TubeGeometry(curve, 40, 1, 8, false);
+    const instanced = new THREE.InstancedBufferGeometry().copy(geometry as THREE.BufferGeometry);
     instanced.instanceCount = options.lightPairsPerRoadWay * 2;
-    let laneWidth = options.roadWidth / options.lanesPerRoad;
-    let aOffset: number[] = [];
-    let aMetrics: number[] = [];
-    let aColor: number[] = [];
-    let colors = this.colors;
-    if (Array.isArray(colors)) colors = colors.map(_c => new THREE.Color(pickRandom(this.colors)));
+    const laneWidth = options.roadWidth / options.lanesPerRoad;
+    const aOffset: number[] = [];
+    const aMetrics: number[] = [];
+    const aColor: number[] = [];
+    let colors = this.colors as unknown;
+    if (Array.isArray(colors)) colors = (colors as number[]).map(() => new THREE.Color(pickRandom(this.colors)));
     else colors = new THREE.Color(colors);
 
     for (let i = 0; i < options.lightPairsPerRoadWay; i++) {
-      let radius = random(options.carLightsRadius);
-      let length = random(options.carLightsLength);
-      let speed = random(this.speed);
-      let carLane = i % options.lanesPerRoad;
+      const radius = random(options.carLightsRadius);
+      const length = random(options.carLightsLength);
+      const speed = random(this.speed);
+      const carLane = i % options.lanesPerRoad;
       let laneX = carLane * laneWidth - options.roadWidth / 2 + laneWidth / 2;
-      let carWidth = random(options.carWidthPercentage) * laneWidth;
-      let carShiftX = random(options.carShiftX) * laneWidth;
+      const carWidth = random(options.carWidthPercentage) * laneWidth;
+      const carShiftX = random(options.carShiftX) * laneWidth;
       laneX += carShiftX;
-      let offsetY = random(options.carFloorSeparation) + radius * 1.3;
-      let offsetZ = -random(options.length);
+      const offsetY = random(options.carFloorSeparation) + radius * 1.3;
+      const offsetZ = -random(options.length);
       aOffset.push(laneX - carWidth / 2, offsetY, offsetZ);
       aOffset.push(laneX + carWidth / 2, offsetY, offsetZ);
       aMetrics.push(radius, length, speed);
       aMetrics.push(radius, length, speed);
-      let color = Array.isArray(colors) ? pickRandom(colors) : colors;
+      const color = Array.isArray(colors) ? pickRandom(colors) : colors;
       aColor.push(color.r, color.g, color.b);
       aColor.push(color.r, color.g, color.b);
     }
     instanced.setAttribute('aOffset', new THREE.InstancedBufferAttribute(new Float32Array(aOffset), 3, false));
     instanced.setAttribute('aMetrics', new THREE.InstancedBufferAttribute(new Float32Array(aMetrics), 3, false));
     instanced.setAttribute('aColor', new THREE.InstancedBufferAttribute(new Float32Array(aColor), 3, false));
-    let material = new THREE.ShaderMaterial({
+    const material = new THREE.ShaderMaterial({
       fragmentShader: carLightsFragment,
       vertexShader: carLightsVertex,
       transparent: true,
@@ -447,36 +449,40 @@ class CarLights {
     this.mesh.frustumCulled = false;
     this.webgl.scene.add(this.mesh);
   }
-  update(time: number) { this.mesh.material.uniforms.uTime.value = time; }
+  update(time: number) {
+    if (this.mesh && (this.mesh.material as THREE.ShaderMaterial).uniforms) {
+      (this.mesh.material as THREE.ShaderMaterial).uniforms.uTime.value = time;
+    }
+  }
 }
 
 class LightsSticks {
   webgl: App;
-  options: any;
-  mesh: any;
-  constructor(webgl: App, options: any) {
+  options: typeof DEFAULT_EFFECT_OPTIONS;
+  mesh: THREE.Mesh | null = null;
+  constructor(webgl: App, options: typeof DEFAULT_EFFECT_OPTIONS) {
     this.webgl = webgl;
     this.options = options;
   }
   init() {
     const options = this.options;
     const geometry = new THREE.PlaneGeometry(1, 1);
-    let instanced = new THREE.InstancedBufferGeometry().copy(geometry as any);
-    let totalSticks = options.totalSideLightSticks;
+    const instanced = new THREE.InstancedBufferGeometry().copy(geometry as THREE.BufferGeometry);
+    const totalSticks = options.totalSideLightSticks;
     instanced.instanceCount = totalSticks;
-    let stickoffset = options.length / (totalSticks - 1);
+    const stickoffset = options.length / (totalSticks - 1);
     const aOffset: number[] = [];
     const aColor: number[] = [];
     const aMetrics: number[] = [];
     let colors = options.colors.sticks;
-    if (Array.isArray(colors)) colors = colors.map((c: any) => new THREE.Color(c));
+    if (Array.isArray(colors)) colors = (colors as number[]).map((c) => new THREE.Color(c));
     else colors = new THREE.Color(colors);
 
     for (let i = 0; i < totalSticks; i++) {
-      let width = random(options.lightStickWidth);
-      let height = random(options.lightStickHeight);
+      const width = random(options.lightStickWidth);
+      const height = random(options.lightStickHeight);
       aOffset.push((i - 1) * stickoffset * 2 + stickoffset * Math.random());
-      let color = Array.isArray(colors) ? pickRandom(colors) : colors;
+      const color = Array.isArray(colors) ? pickRandom(colors) : colors;
       aColor.push(color.r, color.g, color.b);
       aMetrics.push(width, height);
     }
@@ -499,25 +505,29 @@ class LightsSticks {
     this.mesh.frustumCulled = false;
     this.webgl.scene.add(this.mesh);
   }
-  update(time: number) { this.mesh.material.uniforms.uTime.value = time; }
+  update(time: number) {
+    if (this.mesh && (this.mesh.material as THREE.ShaderMaterial).uniforms) {
+      (this.mesh.material as THREE.ShaderMaterial).uniforms.uTime.value = time;
+    }
+  }
 }
 
 class Road {
   webgl: App;
-  options: any;
+  options: typeof DEFAULT_EFFECT_OPTIONS;
   uTime: { value: number };
-  leftRoadWay: any;
-  rightRoadWay: any;
-  island: any;
-  constructor(webgl: App, options: any) {
+  leftRoadWay: THREE.Mesh | null = null;
+  rightRoadWay: THREE.Mesh | null = null;
+  island: THREE.Mesh | null = null;
+  constructor(webgl: App, options: typeof DEFAULT_EFFECT_OPTIONS) {
     this.webgl = webgl;
     this.options = options;
     this.uTime = { value: 0 };
   }
-  createPlane(side: number, _width: number, isRoad: boolean) {
+  createPlane(side: number, isRoad: boolean) {
     const options = this.options;
     const geometry = new THREE.PlaneGeometry(isRoad ? options.roadWidth : options.islandWidth, options.length, 20, 100);
-    let uniforms: any = {
+    const uniforms: Record<string, { value: THREE.Color | number | THREE.Vector4 }> = {
       uTravelLength: { value: options.length },
       uColor: { value: new THREE.Color(isRoad ? options.colors.roadColor : options.colors.islandColor) },
       uTime: this.uTime
@@ -549,9 +559,9 @@ class Road {
     return mesh;
   }
   init() {
-    this.leftRoadWay = this.createPlane(-1, this.options.roadWidth, true);
-    this.rightRoadWay = this.createPlane(1, this.options.roadWidth, true);
-    this.island = this.createPlane(0, this.options.islandWidth, false);
+    this.leftRoadWay = this.createPlane(-1, true);
+    this.rightRoadWay = this.createPlane(1, true);
+    this.island = this.createPlane(0, false);
   }
   update(time: number) { this.uTime.value = time; }
 }
@@ -559,19 +569,19 @@ class Road {
 // --- HELPERS AND SHADERS ---
 
 function lerp(current: number, target: number, speed = 0.1, limit = 0.001) {
-  let change = (target - current) * speed;
+  const change = (target - current) * speed;
   if (Math.abs(change) < limit) change = target - current;
   return change;
 }
-const random = (base: any) => {
+const random = (base: number | number[]) => {
   if (Array.isArray(base)) return Math.random() * (base[1] - base[0]) + base[0];
   return Math.random() * base;
 };
-const pickRandom = (arr: any) => {
+const pickRandom = <T,>(arr: T | T[]): T => {
   if (Array.isArray(arr)) return arr[Math.floor(Math.random() * arr.length)];
   return arr;
 };
-function resizeRendererToDisplaySize(renderer: THREE.WebGLRenderer, setSize: any) {
+function resizeRendererToDisplaySize(renderer: THREE.WebGLRenderer, setSize: (w: number, h: number, s: boolean) => void) {
   const canvas = renderer.domElement;
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
@@ -583,7 +593,7 @@ function resizeRendererToDisplaySize(renderer: THREE.WebGLRenderer, setSize: any
   return false;
 }
 
-const DISTORTIONS: any = {
+const DISTORTIONS: Record<string, { uniforms: Record<string, { value: THREE.Vector4 }>; getDistortion: string; getJS: (p: number, t: number) => THREE.Vector3 }> = {
   turbulentDistortion: {
     uniforms: { uFreq: { value: new THREE.Vector4(4, 8, 8, 1) }, uAmp: { value: new THREE.Vector4(25, 5, 10, 10) } },
     getDistortion: `
@@ -601,7 +611,7 @@ const DISTORTIONS: any = {
       const nsin = (v: number) => Math.sin(v) * 0.5 + 0.5;
       const getX = (p: number) => Math.cos(Math.PI * p * uFreq.x + time) * uAmp.x + Math.pow(Math.cos(Math.PI * p * uFreq.y + time * (uFreq.y / uFreq.x)), 2) * uAmp.y;
       const getY = (p: number) => -nsin(Math.PI * p * uFreq.z + time) * uAmp.z - Math.pow(nsin(Math.PI * p * uFreq.w + time / (uFreq.z / uFreq.w)), 5) * uAmp.w;
-      let distortion = new THREE.Vector3(getX(progress) - getX(progress + 0.007), getY(progress) - getY(progress + 0.007), 0);
+      const distortion = new THREE.Vector3(getX(progress) - getX(progress + 0.007), getY(progress) - getY(progress + 0.007), 0);
       return distortion.multiply(new THREE.Vector3(-2, -5, 0)).add(new THREE.Vector3(0, 0, -10));
     }
   }

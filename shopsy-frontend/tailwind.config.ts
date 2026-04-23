@@ -1,9 +1,9 @@
 import type { Config } from "tailwindcss";
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-// @ts-ignore
+// @ts-expect-error - mini-svg-data-uri does not have types
 const svgToDataUri = require("mini-svg-data-uri");
-// @ts-ignore
+// @ts-expect-error - tailwind internal utils do not have types
 const { default: flattenColorPalette } = require("tailwindcss/lib/util/flattenColorPalette");
 /* eslint-enable @typescript-eslint/no-require-imports */
 

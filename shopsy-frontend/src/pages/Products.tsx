@@ -7,38 +7,31 @@ const CATEGORIES = ["All", "Electronics", "Accessories", "Wearables", "Home"];
 
 const Products: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialCategory = searchParams.get('category') || "All";
-  const [activeCategory, setActiveCategory] = useState(initialCategory);
+  const categoryFromUrl = searchParams.get('category') || "All";
+  const activeCategory = CATEGORIES.includes(categoryFromUrl) ? categoryFromUrl : "All";
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchProducts = async () => {
-      setIsLoading(true);
       try {
         const response = await productApi.getAll();
-        setProducts(response.data);
+        if (isMounted) setProducts(response.data);
       } catch (error) {
         console.error('Failed to fetch products:', error);
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     fetchProducts();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  useEffect(() => {
-    const categoryFromUrl = searchParams.get('category');
-    if (categoryFromUrl && CATEGORIES.includes(categoryFromUrl)) {
-      setActiveCategory(categoryFromUrl);
-    } else if (!categoryFromUrl) {
-      setActiveCategory("All");
-    }
-  }, [searchParams]);
-
   const handleCategoryChange = (category: string) => {
-    setActiveCategory(category);
     if (category === "All") {
       setSearchParams({});
     } else {
