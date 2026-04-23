@@ -1,4 +1,4 @@
-# Shopsy - Enterprise E-Commerce Platform
+# Shopsy - Enterprise E-Commerce Platform (Backend Microservices)
 
 A FAANG-grade, microservices-based e-commerce platform built with Spring Boot, Spring Cloud, Spring AI, and React + TypeScript.
 
