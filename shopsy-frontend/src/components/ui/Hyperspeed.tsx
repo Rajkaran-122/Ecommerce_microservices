@@ -82,8 +82,11 @@ const Hyperspeed: React.FC<HyperspeedProps> = ({ effectOptions = DEFAULT_EFFECT_
 
 // --- CLASSES MOVED OUTSIDE FOR CLARITY AND SCOPE FIX ---
 
+type DistortionObj = { uniforms: Record<string, { value: THREE.Vector4 }>; getDistortion: string; getJS: (p: number, t: number) => THREE.Vector3 };
+type HyperspeedOptionsType = Omit<typeof DEFAULT_EFFECT_OPTIONS, 'distortion'> & { distortion: string | DistortionObj };
+
 class App {
-  options: typeof DEFAULT_EFFECT_OPTIONS;
+  options: HyperspeedOptionsType;
   container: HTMLElement;
   hasValidSize: boolean;
   renderer: THREE.WebGLRenderer;
@@ -105,7 +108,7 @@ class App {
   renderPass: RenderPass | null = null;
   bloomPass: EffectPass | null = null;
 
-  constructor(container: HTMLElement, options: typeof DEFAULT_EFFECT_OPTIONS) {
+  constructor(container: HTMLElement, options: HyperspeedOptionsType) {
     this.options = options;
     this.container = container;
     this.hasValidSize = false;
@@ -237,11 +240,11 @@ class App {
     const options = this.options;
     this.road.init();
     this.leftCarLights.init();
-    this.leftCarLights.mesh.position.setX(-options.roadWidth / 2 - options.islandWidth / 2);
+    this.leftCarLights.mesh!.position.setX(-options.roadWidth / 2 - options.islandWidth / 2);
     this.rightCarLights.init();
-    this.rightCarLights.mesh.position.setX(options.roadWidth / 2 + options.islandWidth / 2);
+    this.rightCarLights.mesh!.position.setX(options.roadWidth / 2 + options.islandWidth / 2);
     this.leftSticks.init();
-    this.leftSticks.mesh.position.setX(-(options.roadWidth + options.islandWidth / 2));
+    this.leftSticks.mesh!.position.setX(-(options.roadWidth + options.islandWidth / 2));
 
     this.container.addEventListener('mousedown', this.onMouseDown);
     this.container.addEventListener('mouseup', this.onMouseUp);
@@ -253,23 +256,23 @@ class App {
     this.tick();
   }
 
-  onMouseDown(ev: MouseEvent) {
-    if (this.options.onSpeedUp) this.options.onSpeedUp(ev);
+  onMouseDown() {
+    if (this.options.onSpeedUp) this.options.onSpeedUp();
     this.fovTarget = this.options.fovSpeedUp;
     this.speedUpTarget = this.options.speedUp;
   }
-  onMouseUp(ev: MouseEvent) {
-    if (this.options.onSlowDown) this.options.onSlowDown(ev);
+  onMouseUp() {
+    if (this.options.onSlowDown) this.options.onSlowDown();
     this.fovTarget = this.options.fov;
     this.speedUpTarget = 0;
   }
-  onTouchStart(ev: TouchEvent) {
-    if (this.options.onSpeedUp) this.options.onSpeedUp(ev);
+  onTouchStart() {
+    if (this.options.onSpeedUp) this.options.onSpeedUp();
     this.fovTarget = this.options.fovSpeedUp;
     this.speedUpTarget = this.options.speedUp;
   }
-  onTouchEnd(ev: TouchEvent) {
-    if (this.options.onSlowDown) this.options.onSlowDown(ev);
+  onTouchEnd() {
+    if (this.options.onSlowDown) this.options.onSlowDown();
     this.fovTarget = this.options.fov;
     this.speedUpTarget = 0;
   }
@@ -291,8 +294,8 @@ class App {
       this.camera.fov += fovChange * delta * 6;
       updateCamera = true;
     }
-    if (this.options.distortion && this.options.distortion.getJS) {
-      const distortion = this.options.distortion.getJS(0.025, time);
+    if (this.options.distortion && (this.options.distortion as DistortionObj).getJS) {
+      const distortion = (this.options.distortion as DistortionObj).getJS(0.025, time);
       this.camera.lookAt(new THREE.Vector3(
         this.camera.position.x + distortion.x,
         this.camera.position.y + distortion.y,
@@ -384,12 +387,12 @@ class App {
 
 class CarLights {
   webgl: App;
-  options: typeof DEFAULT_EFFECT_OPTIONS;
-  colors: typeof DEFAULT_EFFECT_OPTIONS.colors;
+  options: HyperspeedOptionsType;
+  colors: number | number[];
   speed: number[];
   fade: THREE.Vector2;
   mesh: THREE.Mesh | null = null;
-  constructor(webgl: App, options: typeof DEFAULT_EFFECT_OPTIONS, colors: number | number[], speed: number[], fade: THREE.Vector2) {
+  constructor(webgl: App, options: HyperspeedOptionsType, colors: number | number[], speed: number[], fade: THREE.Vector2) {
     this.webgl = webgl;
     this.options = options;
     this.colors = colors;
@@ -400,7 +403,7 @@ class CarLights {
     const options = this.options;
     const curve = new THREE.LineCurve3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1));
     const geometry = new THREE.TubeGeometry(curve, 40, 1, 8, false);
-    const instanced = new THREE.InstancedBufferGeometry().copy(geometry as THREE.BufferGeometry);
+    const instanced = new THREE.InstancedBufferGeometry().copy(geometry as unknown as THREE.InstancedBufferGeometry);
     instanced.instanceCount = options.lightPairsPerRoadWay * 2;
     const laneWidth = options.roadWidth / options.lanesPerRoad;
     const aOffset: number[] = [];
@@ -408,7 +411,7 @@ class CarLights {
     const aColor: number[] = [];
     let colors = this.colors as unknown;
     if (Array.isArray(colors)) colors = (colors as number[]).map(() => new THREE.Color(pickRandom(this.colors)));
-    else colors = new THREE.Color(colors);
+    else colors = new THREE.Color(colors as number);
 
     for (let i = 0; i < options.lightPairsPerRoadWay; i++) {
       const radius = random(options.carLightsRadius);
@@ -440,10 +443,10 @@ class CarLights {
         uTime: { value: 0 },
         uTravelLength: { value: options.length },
         uFade: { value: this.fade }
-      }, this.webgl.fogUniforms, options.distortion.uniforms)
+      }, this.webgl.fogUniforms, (options.distortion as DistortionObj).uniforms)
     });
     material.onBeforeCompile = shader => {
-      shader.vertexShader = shader.vertexShader.replace('#include <getDistortion_vertex>', options.distortion.getDistortion);
+      shader.vertexShader = shader.vertexShader.replace('#include <getDistortion_vertex>', (options.distortion as DistortionObj).getDistortion);
     };
     this.mesh = new THREE.Mesh(instanced, material);
     this.mesh.frustumCulled = false;
@@ -458,31 +461,32 @@ class CarLights {
 
 class LightsSticks {
   webgl: App;
-  options: typeof DEFAULT_EFFECT_OPTIONS;
+  options: HyperspeedOptionsType;
   mesh: THREE.Mesh | null = null;
-  constructor(webgl: App, options: typeof DEFAULT_EFFECT_OPTIONS) {
+  constructor(webgl: App, options: HyperspeedOptionsType) {
     this.webgl = webgl;
     this.options = options;
   }
   init() {
     const options = this.options;
     const geometry = new THREE.PlaneGeometry(1, 1);
-    const instanced = new THREE.InstancedBufferGeometry().copy(geometry as THREE.BufferGeometry);
+    const instanced = new THREE.InstancedBufferGeometry().copy(geometry as unknown as THREE.InstancedBufferGeometry);
     const totalSticks = options.totalSideLightSticks;
     instanced.instanceCount = totalSticks;
     const stickoffset = options.length / (totalSticks - 1);
     const aOffset: number[] = [];
     const aColor: number[] = [];
     const aMetrics: number[] = [];
-    let colors = options.colors.sticks;
-    if (Array.isArray(colors)) colors = (colors as number[]).map((c) => new THREE.Color(c));
-    else colors = new THREE.Color(colors);
+    const rawColors = options.colors.sticks;
+    let sticksColors: THREE.Color | THREE.Color[];
+    if (Array.isArray(rawColors)) sticksColors = (rawColors as number[]).map((c) => new THREE.Color(c));
+    else sticksColors = new THREE.Color(rawColors as number);
 
     for (let i = 0; i < totalSticks; i++) {
       const width = random(options.lightStickWidth);
       const height = random(options.lightStickHeight);
       aOffset.push((i - 1) * stickoffset * 2 + stickoffset * Math.random());
-      const color = Array.isArray(colors) ? pickRandom(colors) : colors;
+      const color = Array.isArray(sticksColors) ? pickRandom(sticksColors) : sticksColors;
       aColor.push(color.r, color.g, color.b);
       aMetrics.push(width, height);
     }
@@ -496,10 +500,10 @@ class LightsSticks {
       uniforms: Object.assign({
         uTravelLength: { value: options.length },
         uTime: { value: 0 }
-      }, this.webgl.fogUniforms, options.distortion.uniforms)
+      }, this.webgl.fogUniforms, (options.distortion as DistortionObj).uniforms)
     });
     material.onBeforeCompile = shader => {
-      shader.vertexShader = shader.vertexShader.replace('#include <getDistortion_vertex>', options.distortion.getDistortion);
+      shader.vertexShader = shader.vertexShader.replace('#include <getDistortion_vertex>', (options.distortion as DistortionObj).getDistortion);
     };
     this.mesh = new THREE.Mesh(instanced, material);
     this.mesh.frustumCulled = false;
@@ -514,12 +518,12 @@ class LightsSticks {
 
 class Road {
   webgl: App;
-  options: typeof DEFAULT_EFFECT_OPTIONS;
+  options: HyperspeedOptionsType;
   uTime: { value: number };
   leftRoadWay: THREE.Mesh | null = null;
   rightRoadWay: THREE.Mesh | null = null;
   island: THREE.Mesh | null = null;
-  constructor(webgl: App, options: typeof DEFAULT_EFFECT_OPTIONS) {
+  constructor(webgl: App, options: HyperspeedOptionsType) {
     this.webgl = webgl;
     this.options = options;
     this.uTime = { value: 0 };
@@ -527,7 +531,7 @@ class Road {
   createPlane(side: number, isRoad: boolean) {
     const options = this.options;
     const geometry = new THREE.PlaneGeometry(isRoad ? options.roadWidth : options.islandWidth, options.length, 20, 100);
-    const uniforms: Record<string, { value: THREE.Color | number | THREE.Vector4 }> = {
+    let uniforms: Record<string, { value: THREE.Color | number | THREE.Vector4 }> = {
       uTravelLength: { value: options.length },
       uColor: { value: new THREE.Color(isRoad ? options.colors.roadColor : options.colors.islandColor) },
       uTime: this.uTime
@@ -546,10 +550,10 @@ class Road {
       fragmentShader: isRoad ? roadFragment : islandFragment,
       vertexShader: roadVertex,
       side: THREE.DoubleSide,
-      uniforms: Object.assign(uniforms, this.webgl.fogUniforms, options.distortion.uniforms)
+      uniforms: Object.assign({}, uniforms, this.webgl.fogUniforms, (options.distortion as DistortionObj).uniforms)
     });
     material.onBeforeCompile = shader => {
-      shader.vertexShader = shader.vertexShader.replace('#include <getDistortion_vertex>', options.distortion.getDistortion);
+      shader.vertexShader = shader.vertexShader.replace('#include <getDistortion_vertex>', (options.distortion as DistortionObj).getDistortion);
     };
     const mesh = new THREE.Mesh(geometry, material);
     mesh.rotation.x = -Math.PI / 2;
@@ -569,7 +573,7 @@ class Road {
 // --- HELPERS AND SHADERS ---
 
 function lerp(current: number, target: number, speed = 0.1, limit = 0.001) {
-  const change = (target - current) * speed;
+  let change = (target - current) * speed;
   if (Math.abs(change) < limit) change = target - current;
   return change;
 }

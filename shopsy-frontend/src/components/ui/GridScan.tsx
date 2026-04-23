@@ -407,11 +407,11 @@ export const GridScan: React.FC<GridScanProps> = ({
       if (
         enableGyro &&
         typeof window !== 'undefined' &&
-      (window as Window & { DeviceOrientationEvent?: { requestPermission: () => Promise<string> } }).DeviceOrientationEvent &&
-      (window as Window & { DeviceOrientationEvent?: { requestPermission: () => Promise<string> } }).DeviceOrientationEvent!.requestPermission
+      (window as unknown as { DeviceOrientationEvent?: { requestPermission?: () => Promise<string> } }).DeviceOrientationEvent &&
+      typeof (window as unknown as { DeviceOrientationEvent?: { requestPermission?: () => Promise<string> } }).DeviceOrientationEvent?.requestPermission === 'function'
     ) {
       try {
-        await (window as Window & { DeviceOrientationEvent?: { requestPermission: () => Promise<string> } }).DeviceOrientationEvent!.requestPermission();
+        await (window as unknown as { DeviceOrientationEvent?: { requestPermission: () => Promise<string> } }).DeviceOrientationEvent!.requestPermission();
         } catch {
           // noop
         }
@@ -878,7 +878,7 @@ function smoothDampFloat(current: number, target: number, velRef: { v: number },
   const x = omega * deltaTime;
   const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
 
-  const change = current - target;
+  let change = current - target;
   const originalTo = target;
 
   const maxChange = maxSpeed * smoothTime;
